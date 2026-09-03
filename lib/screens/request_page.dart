@@ -49,20 +49,29 @@ class _RequestPageState extends State<RequestPage> {
 
   // 03 · Services.
   final Set<String> _services = {};
-  static const _serviceOptions = [
-    'Villa ou riad',
+static const _serviceOptions = [
+    'Villa',
+    'Riad',
     'Chef privé',
     'Restauration',
-    'Chauffeur privé & transferts',
-    'Décoration & scénographie',
-    'Photographe / vidéaste',
-    'Musique, DJ et artistes',
-    'Beauté et spa',
+    'Chauffeur privé',
+    'Transferts',
+    'Décoration',
+    'Scénographie',
+    'Photographe',
+    'Vidéaste',
+    'Musique',
+    'DJ',
+    'Artistes',
+    'Beauté',
+    'Spa',
     'Sécurité',
-    'Garde d’enfants',
-    'Excursions & activités',
+    "Garde d'enfants",
+    'Excursions',
+    'Activités',
     'Réservations de restaurants',
-    'Billetterie & spectacles',
+    'Billetterie',
+    'Spectacles',
     'Location de matériel',
   ];
 

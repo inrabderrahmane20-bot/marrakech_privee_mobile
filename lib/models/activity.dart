@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../config.dart';
 import '../data/categories.dart' as categories;
 
 /// A catalogue item (activity or event) from the Marrakech Privée database.
@@ -24,6 +25,10 @@ class Activity {
 
   /// Absolute network URL or `data:image/...` data-URI (Supabase data only).
   final String? imageUrl;
+
+  /// Every image of the activity as Base64 `data:image/...` URIs — loaded
+  /// lazily on the detail page from the Supabase `images` column.
+  final List<String> images;
 
   /// Used to keep list keys stable and to persist favourites / bucket list.
   final String? id;
@@ -51,6 +56,7 @@ class Activity {
     this.subcategory,
     this.asset,
     this.imageUrl,
+    this.images = const [],
     this.id,
     this.descriptionFr,
     this.address,
@@ -73,6 +79,7 @@ class Activity {
         section = 'activities',
         city = 'Marrakech',
         imageUrl = null,
+        images = const [],
         id = null,
         descriptionFr = null,
         address = null,
@@ -94,6 +101,7 @@ class Activity {
         section = 'events',
         city = 'Marrakech',
         imageUrl = null,
+        images = const [],
         id = null,
         descriptionFr = null,
         address = null,
@@ -176,8 +184,17 @@ class Activity {
     );
   }
 
-  /// Returns a copy of this activity with `imageUrl` set (lazy image load).
-  Activity withImage(String dataUri) => Activity._(
+  bool get hasGallery => images.isNotEmpty;
+
+  /// The website's per-activity image endpoint for image 0 — used as a light
+  /// thumbnail on list cards until the full Base64 gallery is loaded.
+  String? get remoteCoverUrl {
+    if (id == null || id!.isEmpty) return null;
+    return siteImageUrl(id!, 0);
+  }
+
+  /// Returns a copy with the full Base64 gallery loaded (detail page).
+  Activity withImages(List<String> gallery) => Activity._(
         title: title,
         category: category,
         subcategory: subcategory,
@@ -185,7 +202,8 @@ class Activity {
         city: city,
         description: description,
         asset: asset,
-        imageUrl: dataUri,
+        imageUrl: gallery.isEmpty ? imageUrl : gallery.first,
+        images: gallery,
         id: id,
         descriptionFr: descriptionFr,
         address: address,

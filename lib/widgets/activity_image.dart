@@ -30,7 +30,8 @@ class DataUriImageCache {
 }
 
 /// Renders an [Activity]'s cover image, choosing between the Base64 data-URI
-/// (Supabase), the network URL, the bundled local asset, or a neutral
+/// (loaded Supabase gallery), the website's per-activity image endpoint (light
+/// thumbnail for list cards), the bundled local asset, or a neutral
 /// placeholder when none of them are available.
 class ActivityImage extends StatelessWidget {
   final Activity activity;
@@ -61,9 +62,12 @@ class ActivityImage extends StatelessWidget {
         );
       }
     }
-    if (imageUrl != null && imageUrl.isNotEmpty) {
+    // Supabase rows in lists have no Base64 blob yet: fall back to the
+    // website's per-activity image endpoint (lazy, HTTP-cached thumbnail).
+    final remote = imageUrl ?? activity.remoteCoverUrl;
+    if (remote != null && remote.isNotEmpty) {
       return Image.network(
-        imageUrl,
+        remote,
         width: width,
         height: height,
         fit: fit,

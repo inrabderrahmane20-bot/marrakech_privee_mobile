@@ -25,12 +25,12 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   @override
   void initState() {
     super.initState();
-    _loadCoverImage();
+    _loadGallery();
   }
 
-  Future<void> _loadCoverImage() async {
-    final updated = await ActivityRepository.instance.ensureImage(_activity);
-    if (mounted && updated.hasRemoteImage && updated.imageUrl != _activity.imageUrl) {
+  Future<void> _loadGallery() async {
+    final updated = await ActivityRepository.instance.loadGallery(_activity);
+    if (mounted && updated.hasGallery && updated.images != _activity.images) {
       setState(() => _activity = updated);
     }
   }
@@ -64,7 +64,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         children: [
           Stack(
             children: [
-              ClipRRect(borderRadius: BorderRadius.circular(14), child: ActivityImage(activity: activity, width: double.infinity, height: 280)),
+              ClipRRect(borderRadius: BorderRadius.circular(14), child: _GalleryCarousel(activity: activity)),
               Positioned(top: 10, right: 10, child: FavoriteButton(activity: activity, iconSize: 19)),
             ],
           ),
@@ -275,6 +275,122 @@ class _InfoChip extends StatelessWidget {
             Text(label, style: const TextStyle(color: espresso, fontSize: 12)),
           ],
         ),
+      );
+}
+
+class _GalleryCarousel extends StatefulWidget {
+  final Activity activity;
+  const _GalleryCarousel({required this.activity});
+
+  @override
+  State<_GalleryCarousel> createState() => _GalleryCarouselState();
+}
+
+class _GalleryCarouselState extends State<_GalleryCarousel> {
+  final PageController _controller = PageController();
+  late List<String> _images = widget.activity.images;
+  int _current = 0;
+
+  @override
+  void didUpdateWidget(covariant _GalleryCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activity.images != widget.activity.images) {
+      _images = widget.activity.images;
+      _current = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = _images;
+    return SizedBox(
+      height: 280,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: images.isEmpty
+                ? ActivityImage(activity: widget.activity, width: double.infinity, height: 280)
+                : PageView.builder(
+                    controller: _controller,
+                    itemCount: images.length,
+                    onPageChanged: (i) => setState(() => _current = i),
+                    itemBuilder: (_, i) => _image(images[i]),
+                  ),
+          ),
+          if (images.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12,
+              child: IgnorePointer(
+                child: Center(child: _Dots(count: images.length, current: _current)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _image(String dataUri) {
+    final memory = DataUriImageCache.memoryImage(dataUri);
+    if (memory != null) {
+      return Image(
+        image: memory,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 280,
+        errorBuilder: (_, _, _) => const _GalleryFallback(),
+      );
+    }
+    return const _GalleryFallback();
+  }
+}
+
+/// The thin dotted progress indicator the user asked for: one dot per image,
+/// the active dot stretches wider in coral while the others stay small and
+/// light — it updates as the user slides left/right.
+class _Dots extends StatelessWidget {
+  final int count;
+  final int current;
+  const _Dots({required this.count, required this.current});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(count, (i) {
+            final active = i == current;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active ? coral : Colors.white70,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
+        ),
+      );
+}
+
+class _GalleryFallback extends StatelessWidget {
+  const _GalleryFallback();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: const Color(0xFFE8E0D6),
+        child: const Icon(Icons.image_not_supported_outlined, color: Color(0xFF9B6B4A)),
       );
 }
 

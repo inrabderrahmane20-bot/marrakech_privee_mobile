@@ -18,3 +18,10 @@ const String supabaseAnonKey =
 const String whatsappNumber = '+212 6 23 94 12 20';
 const String whatsappLink = 'https://wa.me/212623941220';
 const String contactEmail = 'bonjour@marrakechprivee.com';
+
+/// Website endpoint serving each activity image by index — the same images as
+/// the Supabase `images` column, but one at a time and HTTP-cached. The app
+/// uses it as a light thumbnail for list cards (image 0) and as a growing
+/// target in the detail gallery while the Base64 gallery loads.
+String siteImageUrl(String activityId, int index) =>
+    'https://www.marrakechprivee.com/api/activities/$activityId/image?i=$index';

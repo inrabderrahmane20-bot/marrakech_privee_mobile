@@ -13,8 +13,9 @@ import 'activities.dart' as seed;
 /// seed data whenever the database is unreachable or misconfigured.
 ///
 /// BULK fetches never select the `images` / `image_url` columns (they are
-/// multi-hundred-KB Base64 blobs per row); the detail page calls [ensureImage]
-/// to pull the image data-URI for a single activity lazily.
+/// multi-hundred-KB Base64 blobs per row). List cards instead load a light
+/// thumbnail from the website's image endpoint; the detail page calls
+/// [loadGallery] to pull the full Base64 image list for one activity lazily.
 class ActivityRepository {
   ActivityRepository._();
 
@@ -82,31 +83,47 @@ class ActivityRepository {
     return _catalogCache!;
   }
 
-  /// Loads the Base64 cover image for a single activity (already cached rows
-  /// are served instantly). Falls back to the given activity unchanged.
-  Future<Activity> ensureImage(Activity activity) async {
+  /// Loads every image of a single activity (the Supabase `images` column,
+  /// an array of Base64 data-URIs). Already-loaded rows are served instantly.
+  /// The call is safe to repeat; on failure the activity is returned unchanged
+  /// and its card keeps the remote thumbnail.
+  Future<Activity> loadGallery(Activity activity) async {
     final id = activity.id;
-    if (id == null || id.isEmpty || activity.hasRemoteImage) return activity;
+    if (id == null || id.isEmpty || activity.hasGallery) return activity;
     final cached = _detailCache[id];
     if (cached != null) return cached;
     try {
-      final uri = Uri.parse('$supabaseUrl/rest/v1/activities?select=image_url&id=eq.$id&limit=1');
+      final uri = Uri.parse('$supabaseUrl/rest/v1/activities?select=images&id=eq.$id&limit=1');
       final response = await http.get(uri, headers: _authHeaders).timeout(timeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is List && decoded.isNotEmpty && decoded.first is Map<String, dynamic>) {
-          final imageUrl = (decoded.first as Map<String, dynamic>)['image_url'] as String? ?? '';
-          if (imageUrl.startsWith('data:')) {
-            final updated = activity.withImage(imageUrl);
+          final images = _parseImageList((decoded.first as Map<String, dynamic>)['images']);
+          if (images.isNotEmpty) {
+            final updated = activity.withImages(images);
             _detailCache[id] = updated;
             return updated;
           }
         }
       }
     } catch (_) {
-      // Ignore — the detail page keeps the placeholder image.
+      // Ignore — the carousel keeps the remote thumbnail.
     }
     return activity;
+  }
+
+  static List<String> _parseImageList(Object? value) {
+    if (value == null) return const [];
+    if (value is List) return value.whereType<String>().toList();
+    final text = value.toString().trim();
+    if (text.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is List) return decoded.whereType<String>().toList();
+    } catch (_) {
+      // Not JSON — not a usable gallery.
+    }
+    return const [];
   }
 
   /// Site-wide search over the fetched catalogue (title, description, city).
