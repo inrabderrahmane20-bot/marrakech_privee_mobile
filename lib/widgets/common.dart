@@ -137,7 +137,8 @@ class SectionShell extends StatelessWidget {
 class PageFrame extends StatelessWidget {
   final String title;
   final Widget child;
-  const PageFrame({required this.title, required this.child, super.key});
+  final Widget? bottomBar;
+  const PageFrame({required this.title, required this.child, this.bottomBar, super.key});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -149,5 +150,6 @@ class PageFrame extends StatelessWidget {
           title: Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w300)),
         ),
         body: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(23, 15, 23, 40), child: child),
+        bottomNavigationBar: bottomBar,
       );
 }

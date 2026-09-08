@@ -6,20 +6,74 @@ import '../../theme/app_theme.dart';
 import '../../widgets/catalog_card.dart';
 import '../../widgets/common.dart';
 
-class Marquee extends StatelessWidget {
+class Marquee extends StatefulWidget {
   const Marquee({super.key});
 
   @override
-  Widget build(BuildContext context) => Container(
-        color: espresso,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        child: const Text(
-          'Conciergerie privée  ·  Des lieux d’exception  ·  Dîners dans le désert  ·  Mariages  ·  Transport VIP  ·  Expériences confidentielles',
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-          style: TextStyle(color: cream, fontSize: 15, fontStyle: FontStyle.italic),
+  State<Marquee> createState() => _MarqueeState();
+}
+
+class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
+  static const String _tagline =
+      'Conciergerie privée  ·  Des lieux d’exception  ·  Dîners dans le désert  ·  Mariages  ·  Transport VIP  ·  Expériences confidentielles';
+  static const TextStyle _style = TextStyle(color: cream, fontSize: 15, fontStyle: FontStyle.italic);
+  static const double _gap = 46;
+
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final family = DefaultTextStyle.of(context).style.fontFamily;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: _tagline,
+        style: TextStyle(color: cream, fontSize: 15, fontStyle: FontStyle.italic, fontFamily: family),
+      ),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final textWidth = painter.width;
+
+    return Container(
+      color: espresso,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      child: ClipRect(
+        child: LayoutBuilder(
+          builder: (_, _) => AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final offset = -_controller.value * (textWidth + _gap);
+              return Stack(
+                children: [
+                  Transform.translate(offset: Offset(offset, 0), child: child),
+                  Positioned(left: offset + textWidth + _gap, top: 0, child: child!),
+                ],
+              );
+            },
+            child: const Text(
+              _tagline,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.clip,
+              style: _style,
+            ),
+          ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class InvitationSection extends StatelessWidget {

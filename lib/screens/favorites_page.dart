@@ -35,7 +35,7 @@ class BucketPage extends StatelessWidget {
       );
 }
 
-class _ListedPage extends StatelessWidget {
+class _ListedPage extends StatefulWidget {
   final String title;
   final IconData icon;
   final String emptyText;
@@ -53,80 +53,110 @@ class _ListedPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => PageFrame(
-        title: title,
-        child: FutureBuilder<List<Activity>>(
-          future: ActivityRepository.instance.catalog(),
-          builder: (context, snapshot) {
-            final all = snapshot.data ?? <Activity>[];
-            return ListenableBuilder(
-              listenable: UserLists.instance,
-              builder: (context, _) {
-                final items = all.where(filter).toList();
-                if (!snapshot.hasData) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Center(child: CircularProgressIndicator(color: coral)),
-                  );
-                }
-                if (items.isEmpty) {
-                  return Column(
-                    children: [
-                      const SizedBox(height: 35),
-                      Icon(icon, color: coral, size: 42),
-                      const SizedBox(height: 15),
-                      Text(emptyText, textAlign: TextAlign.center, style: const TextStyle(color: brown, fontSize: 15)),
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ...items
-                        .map((item) => CatalogCard(
-                              item: item,
-                              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ActivityDetailPage(activity: item))),
-                            )),
-                    if (confirmLabel != null) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: cream,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: blushDeep),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (confirmHint != null) ...[
-                              Text(
-                                confirmHint!,
-                                style: const TextStyle(color: brown, fontSize: 13, height: 1.5),
-                              ),
-                              const SizedBox(height: 14),
-                            ],
-                            SizedBox(
-                              width: double.infinity,
-                              child: PillButton(
-                                label: confirmLabel!,
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => RequestPage(bucketItems: items),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              },
+  State<_ListedPage> createState() => _ListedPageState();
+}
+
+class _ListedPageState extends State<_ListedPage> {
+  List<Activity>? _catalog;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final all = await ActivityRepository.instance.catalog();
+    if (mounted) setState(() => _catalog = all);
+  }
+
+  void _openConfirm(List<Activity> items) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => RequestPage(bucketItems: items)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: UserLists.instance,
+        builder: (context, _) {
+          final all = _catalog ?? const <Activity>[];
+          final items = all.where(widget.filter).toList();
+          final loading = _catalog == null;
+
+          final Widget body;
+          if (loading) {
+            body = const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator(color: coral)),
             );
-          },
+          } else if (items.isEmpty) {
+            body = Column(
+              children: [
+                const SizedBox(height: 35),
+                Icon(widget.icon, color: coral, size: 42),
+                const SizedBox(height: 15),
+                Text(widget.emptyText, textAlign: TextAlign.center, style: const TextStyle(color: brown, fontSize: 15)),
+              ],
+            );
+          } else {
+            body = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items
+                  .map((item) => CatalogCard(
+                        item: item,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => ActivityDetailPage(activity: item)),
+                        ),
+                      ))
+                  .toList(),
+            );
+          }
+
+          return PageFrame(
+            title: widget.title,
+            bottomBar: widget.confirmLabel != null && items.isNotEmpty
+                ? _ConfirmBar(
+                    hint: widget.confirmHint,
+                    label: widget.confirmLabel!,
+                    onConfirm: () => _openConfirm(items),
+                  )
+                : null,
+            child: body,
+          );
+        },
+      );
+}
+
+class _ConfirmBar extends StatelessWidget {
+  final String? hint;
+  final String label;
+  final VoidCallback onConfirm;
+
+  const _ConfirmBar({required this.hint, required this.label, required this.onConfirm});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: cream,
+          border: Border(top: BorderSide(color: blushDeep)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(23, 12, 23, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (hint != null) ...[
+                  Text(hint!, style: const TextStyle(color: brown, fontSize: 12, height: 1.45)),
+                  const SizedBox(height: 10),
+                ],
+                PillButton(label: label, onPressed: onConfirm),
+              ],
+            ),
+          ),
         ),
       );
 }

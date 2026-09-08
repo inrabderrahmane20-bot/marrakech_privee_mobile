@@ -125,5 +125,9 @@ Future<void> _openDrawerLink(WidgetTester tester, String label) async {
   await tester.scrollUntilVisible(find.text(label), 120, scrollable: drawerScrollable);
   await tester.pumpAndSettle();
   await tester.tap(find.text(label));
-  await tester.pumpAndSettle();
+  // Bounded pumps instead of pumpAndSettle: the about page hosts an infinite
+  // marquee animation that never settles.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.pump(const Duration(milliseconds: 350));
 }
