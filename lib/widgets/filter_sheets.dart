@@ -2,12 +2,40 @@ import 'package:flutter/material.dart';
 
 import '../data/activity_repository.dart';
 import '../data/categories.dart';
+import '../models/activity.dart';
 import '../theme/app_theme.dart';
 
 /// Pop-up (modal bottom sheet) listing every available catalogue category so
 /// the user can filter the home list by type.
 Future<void> showFilterSheet(BuildContext context, String selected, ValueChanged<String> onCategorySelected) async {
   final all = await ActivityRepository.instance.activities();
+  if (!context.mounted) return;
+  final slugs = ['all', ...all.map((a) => a.category).where((c) => c.isNotEmpty).toSet()]..sort();
+  final chosen = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: cream,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    builder: (context) => _PickerSheet<String>(
+      title: 'Filtres',
+      items: slugs,
+      selected: selected,
+      labelOf: (value) => value == 'all' ? 'Toutes les catégories' : categoryLabel(value),
+      onChanged: (value) => Navigator.pop(context, value),
+    ),
+  );
+  if (chosen != null) onCategorySelected(chosen);
+}
+
+/// Same filter sheet but driven by an arbitrary item source — used by pages
+/// that show a subset of the catalogue (e.g. the experiences page).
+Future<void> showFilterSheetFor(
+  BuildContext context,
+  Future<List<Activity>> source,
+  String selected,
+  ValueChanged<String> onCategorySelected,
+) async {
+  final all = await source;
   if (!context.mounted) return;
   final slugs = ['all', ...all.map((a) => a.category).where((c) => c.isNotEmpty).toSet()]..sort();
   final chosen = await showModalBottomSheet<String>(

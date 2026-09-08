@@ -127,10 +127,13 @@ class ActivityRepository {
   }
 
   /// Site-wide search over the fetched catalogue (title, description, city).
+  ///
+  /// An empty query returns the whole catalogue (activities + experiences) so
+  /// the search page shows everything before the user types anything.
   Future<List<Activity>> search(String query) async {
-    final term = query.trim().toLowerCase();
-    if (term.isEmpty) return [];
     final all = await catalog();
+    final term = query.trim().toLowerCase();
+    if (term.isEmpty) return all;
     return all
         .where((a) =>
             '${a.title} ${a.categoryLabel} ${a.city} ${a.description}'

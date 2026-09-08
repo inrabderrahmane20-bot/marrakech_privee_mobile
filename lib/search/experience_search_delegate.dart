@@ -27,18 +27,36 @@ class ExperienceSearchDelegate extends SearchDelegate<Activity?> {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: coral));
         }
-        if (matches.isEmpty) return const Center(child: Text('Aucune expérience trouvée.', style: TextStyle(color: brown)));
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: matches
-              .map((item) => CatalogCard(
-                    item: item,
-                    onTap: () {
-                      close(context, item);
-                      Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ActivityDetailPage(activity: item)));
-                    },
-                  ))
-              .toList(),
+        if (matches.isEmpty) {
+          return const Center(child: Text('Aucune expérience trouvée.', style: TextStyle(color: brown)));
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                query.trim().isEmpty
+                    ? 'Toutes les expériences · ${matches.length}'
+                    : '${matches.length} résultat${matches.length > 1 ? 's' : ''}',
+                style: const TextStyle(color: espresso, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: matches
+                    .map((item) => CatalogCard(
+                          item: item,
+                          onTap: () {
+                            close(context, item);
+                            Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ActivityDetailPage(activity: item)));
+                          },
+                        ))
+                    .toList(),
+              ),
+            ),
+          ],
         );
       },
     );

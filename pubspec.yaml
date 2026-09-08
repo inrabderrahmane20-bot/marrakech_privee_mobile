@@ -38,6 +38,8 @@ dependencies:
   # HTTP client used to fetch the Marrakech Privée catalogue from the
   # Supabase PostgREST API (/rest/v1/activities).
   http: ^1.2.2
+  url_launcher: ^6.3.2
+  share_plus: ^13.3.0
 
 dev_dependencies:
   flutter_test:

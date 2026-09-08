@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-import '../../config.dart';
 import '../../data/activity_repository.dart';
 import '../../data/user_lists.dart';
 import '../../models/activity.dart';
 import '../../screens/request_page.dart';
+import '../../services/outreach.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/activity_image.dart';
 import '../../widgets/common.dart';
@@ -35,23 +34,65 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
     }
   }
 
-  Future<void> _openLink(String url) async {
-    await Clipboard.setData(ClipboardData(text: url));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lien copié — collez-le dans votre navigateur ou Cartes.')),
-      );
-    }
+  void _openLink(String url) {
+    Outreach.copyRaw(context, url);
   }
 
-  void _shareOnWhatsApp() {
-    final text = 'Découvrons cette expérience Marrakech Privée : ${_activity.title}\n\n$whatsappLink';
-    Clipboard.setData(ClipboardData(text: text));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Message copié — collez-le dans WhatsApp au $whatsappNumber.')),
-      );
-    }
+  void _openShareSheet() {
+    final activity = _activity;
+    final link = Outreach.activityLink(activity);
+    final shareText = 'Découvrons cette expérience Marrakech Privée : ${activity.title}\n$link';
+    // The website link of the activity is copied automatically, so it is ready
+    // to paste wherever the user wants to share it.
+    Outreach.copyLink(context, activity);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(color: blushDeep, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('Partager', style: TextStyle(color: espresso, fontSize: 20, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 14),
+              _ShareOption(
+                icon: Icons.chat_bubble_outline,
+                label: 'WhatsApp',
+                onTap: () { Navigator.pop(ctx); Outreach.whatsapp(context, shareText); },
+              ),
+              _ShareOption(
+                icon: Icons.camera_alt_outlined,
+                label: 'Instagram',
+                onTap: () { Navigator.pop(ctx); Outreach.instagram(context, shareText); },
+              ),
+              _ShareOption(
+                icon: Icons.mail_outline,
+                label: 'E-mail',
+                onTap: () { Navigator.pop(ctx); Outreach.email(context, activity.title, shareText); },
+              ),
+              _ShareOption(
+                icon: Icons.ios_share,
+                label: 'Partager via\u2026',
+                onTap: () { Navigator.pop(ctx); Outreach.systemShare(context, activity); },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -171,14 +212,19 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: PillButton(label: 'Demander cette expérience', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RequestPage()))),
+            child: PillButton(
+              label: 'Demander cette expérience',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => RequestPage(activity: activity)),
+              ),
+            ),
           ),
           const SizedBox(height: 6),
           Center(
             child: TextButton(
-              onPressed: _shareOnWhatsApp,
+              onPressed: _openShareSheet,
               style: TextButton.styleFrom(foregroundColor: brown),
-              child: const Text('Partager sur WhatsApp', style: TextStyle(fontSize: 12, decoration: TextDecoration.underline)),
+              child: const Text('Partager cette expérience', style: TextStyle(fontSize: 12, decoration: TextDecoration.underline)),
             ),
           ),
         ],
@@ -391,6 +437,22 @@ class _GalleryFallback extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         color: const Color(0xFFE8E0D6),
         child: const Icon(Icons.image_not_supported_outlined, color: Color(0xFF9B6B4A)),
+      );
+}
+
+class _ShareOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ShareOption({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        leading: Icon(icon, color: coral, size: 20),
+        title: Text(label, style: const TextStyle(color: espresso, fontSize: 15)),
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        onTap: onTap,
       );
 }
 
